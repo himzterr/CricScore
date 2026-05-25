@@ -96,15 +96,21 @@ CricScore/
 
 **Acceptance:** `pip install -e .` then `cricscore https://www.espncricinfo.com/.../70th-match-1529313/full-scorecard` prints `MatchRef(series_id=1510719, match_id=1529313)`.
 
-#### Phase 2 — Data layer
+#### Phase 2 — Data layer ✅ shipped
 
-- `src/cricscore/api/client.py` — `ESPNCricinfoClient` wrapping `curl_cffi.requests.Session(impersonate="chrome")`. Public method: `fetch_scorecard(match_ref) -> dict`.
-- `src/cricscore/api/endpoints.py` — `scorecard_url(series_id, match_id)` → `https://hs-consumer-api.espncricinfo.com/v1/pages/match/scorecard?lang=en&seriesId={s}&matchId={m}`.
-- `src/cricscore/models/match.py` — pydantic models for the response slice we care about: `Match`, `Innings`, `Batter`, `Bowler`, `FallOfWicket`. Tolerant of missing fields.
-- Capture a real response into `tests/fixtures/scorecard_1529313.json` and parse it in `test_models.py`.
-- CLI: add `--json` flag that prints the parsed `Match` as JSON (useful for debugging and CI).
+Empirical reality at fetch time (May 2026): the `hs-consumer-api.espncricinfo.com` JSON endpoint is Akamai-gated past what `curl_cffi` Chrome impersonation can defeat — it returns 403 with every profile we tried (`chrome120/124/131`, `safari17_*`, `edge99/101`, `firefox135`) even with warmed cookies and a real `Referer`. The HTML pages however return 200 and embed the **full** match payload in a `__NEXT_DATA__` script tag (~970 KB per scorecard), which is what the data layer now scrapes.
 
-**Acceptance:** `cricscore <url> --json` prints structured match data; `pytest` passes against the fixture.
+- `src/cricscore/_native.py` — Pattern 1 hook: tries `cricscore._native_rs`, falls back to Python. Future Rust acceleration drops in via `maturin develop` with zero caller changes.
+- `src/cricscore/api/_python_client.py` — curl_cffi session that warms cookies on the homepage then loads `/series/x-<series_id>/y-<match_id>/full-scorecard` (placeholder slugs — ESPN redirects). Extracts `props.appPageProps.data` from `__NEXT_DATA__`.
+- `src/cricscore/api/client.py` — `ESPNCricinfoClient.fetch_scorecard(MatchRef) -> dict`, dispatching through `_native`.
+- `src/cricscore/api/endpoints.py` — HTML page URL builders.
+- `src/cricscore/models/match.py` — pydantic models (`Match`, `Innings`, `Batter`, `Bowler`, `FallOfWicket`, `TeamScore`, `Ground`, `PlayerAward`) with `extra="ignore"` and aggressive optionality. `Match.from_scorecard_payload(dict)` is the public entry point.
+- `tests/fixtures/scorecard_1529313.json` (1.6 MB) — captured live from the IPL match.
+- `tests/test_models.py` — verifies metadata, team scores, batting lineup, top scorer (KL Rahul 60(30)), best bowler (Lungi Ngidi 3/27), Player of the Match (Kuldeep Yadav), and round-trip through JSON.
+- `tests/test_extract_next_data.py` — covers the `__NEXT_DATA__` extractor against synthetic HTML.
+- CLI: `cricscore <url>` prints a human summary; `cricscore <url> --json` prints the parsed `Match` as JSON.
+
+**Acceptance:** `pytest -q` reports 27 passed; `cricscore <ipl-url>` prints "DC won by 40 runs" with both team scores and innings totals.
 
 #### Phase 3 — TUI skeleton + scorecard render
 
