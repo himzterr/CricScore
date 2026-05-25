@@ -129,15 +129,18 @@ Empirical reality at fetch time (May 2026): the `hs-consumer-api.espncricinfo.co
 
 **Acceptance:** 32 tests passing. Headless render of the IPL match produces a `MatchHeader` for match id 125458, two innings tabs, 10 batting rows (7 batters + extras + total + DNB) and 6 bowling rows in the first innings, and `n` cycles tabs.
 
-#### Phase 4 — Text effects & polish
+#### Phase 4 — Text effects & polish ✅ shipped
 
-- Typewriter reveal on the match-header title (`effects/typewriter.py`).
-- Gradient run/wicket totals (`effects/gradient.py`).
-- Animated row reveal in batting tables (stagger via Textual `set_interval`).
-- Spinner-while-fetching transitions smoothly into the scorecard (cross-fade by mounting `ScorecardScreen` and unmounting `LoadingScreen` with a CSS transition).
-- Sparkline for the worm/run-rate in `MatchHeader` (Rich `Bar` row from per-over runs if available).
+- `cricscore/effects/typewriter.py` — `TypewriterLabel` (Static subclass) reveals text character-by-character on a self-cancelling timer; `reset_to(text)` restarts with a new phrase.
+- `cricscore/effects/gradient.py` — `gradient_text(text, start, end, *, bold)` returns a `rich.text.Text` with per-character RGB interpolation. Used on scores and totals.
+- `cricscore/effects/sparkline.py` — `sparkline(values)` returns a row of Unicode block characters scaled to the input. Empty when all-zero / empty input so callers can hide the row cleanly.
+- `models/match.py` — added `Innings.runs_per_over` and `Innings.wickets_per_over` exposing the ESPN `inningOvers` array. Sparkline reads from this; the model knows ESPN field names so widgets don't have to.
+- `tui/widgets/match_header.py` — rebuilt as a `Vertical` container of small widgets: typewriter title, status, venue, gradient-coloured team scores, per-over runs sparkline (one per innings), PotM line.
+- `tui/widgets/batting_table.py` — rows now stream in on a 35ms stagger via `set_interval`; first row appears synchronously so the table is never visibly empty; "Total" line uses the same warm gradient as scores.
+- `tui/screens/loading.py` — typewriter status that cycles through ("Warming up the Akamai handshake...", "Fetching scorecard...", "Parsing innings...", "Rendering...") on a 0.9s rotation until the worker completes.
+- `tests/test_effects.py` — 12 tests covering gradient endpoint colors, per-character spans, sparkline scaling, edge cases (empty, all-zero, None, negatives).
 
-**Acceptance:** Subjective — looks polished, animations don't block input. Manual smoke test on the example URL plus one Test match URL.
+**Acceptance:** 45 tests passing. Headless snapshot grew from 75 KB → 98 KB (extra gradient spans + sparkline rows) and renders cleanly at 120×44.
 
 #### Phase 5 — Robustness
 

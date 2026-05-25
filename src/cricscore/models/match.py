@@ -118,6 +118,29 @@ class Innings(_ESPNModel):
     fall_of_wickets: list[FallOfWicket] = Field(
         default_factory=list, alias="inningFallOfWickets"
     )
+    # Raw per-over records. The full per-over schema is large and noisy;
+    # only the fields the sparkline cares about are exposed via properties.
+    over_records: list[dict[str, Any]] = Field(
+        default_factory=list, alias="inningOvers"
+    )
+
+    @property
+    def runs_per_over(self) -> list[int]:
+        """Runs scored in each over (in order). Missing values become 0."""
+        out: list[int] = []
+        for over in self.over_records:
+            value = over.get("overRuns")
+            out.append(int(value) if isinstance(value, (int, float)) else 0)
+        return out
+
+    @property
+    def wickets_per_over(self) -> list[int]:
+        """Wickets that fell in each over (in order)."""
+        out: list[int] = []
+        for over in self.over_records:
+            value = over.get("overWickets")
+            out.append(int(value) if isinstance(value, (int, float)) else 0)
+        return out
 
     @property
     def batting_lineup(self) -> list[Batter]:

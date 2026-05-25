@@ -118,6 +118,19 @@ MatchHeader {
     margin: 1 2 0 2;
 }
 
+MatchHeader .match-title,
+MatchHeader .match-status,
+MatchHeader .match-venue,
+MatchHeader .match-team,
+MatchHeader .match-sparkline,
+MatchHeader .match-award {
+    height: 1;
+}
+
+MatchHeader .match-spacer {
+    height: 1;
+}
+
 TabbedContent {
     height: 1fr;
     margin: 1 2 1 2;

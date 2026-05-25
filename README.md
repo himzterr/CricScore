@@ -3,10 +3,10 @@
 A polished terminal UI for ESPNCricinfo match scorecards. Paste a full-scorecard
 URL, watch the match render in your terminal with animated text effects.
 
-> Status: **Phase 3 — TUI working.** The default `cricscore <url>` launches
-> a Textual app with batting/bowling tables, fall of wickets, and tab
-> navigation. Polish + text effects land in Phase 4. See [PLAN.md](./PLAN.md)
-> for the full roadmap.
+> Status: **Phase 4 — polished TUI.** Typewriter title, gradient scores,
+> per-over runs sparkline, staggered batting-table reveal, cycling
+> loading-screen status. Robustness (error screens + cache) lands in
+> Phase 5. See [PLAN.md](./PLAN.md) for the full roadmap.
 
 ## Requirements
 
@@ -63,7 +63,8 @@ See [PLAN.md](./PLAN.md) for the full multi-phase plan. In short:
 1. **Phase 1** — Scaffolding + URL parser ✅
 2. **Phase 2** — Data layer (curl_cffi + HTML `__NEXT_DATA__` + pydantic models) ✅
 3. **Phase 3** — TUI skeleton (header, batting & bowling tables, fall of wickets) ✅
-4. **Phase 4** — Text effects & polish (typewriter, gradients, animated reveals) ← *next*
+4. **Phase 4** — Text effects & polish (typewriter, gradients, sparkline, animated reveals) ✅
+5. **Phase 5** — Robustness (error screens, disk cache, CI) ← *next*
 4. **Phase 4** — Text effects & polish (typewriter, gradients, animated reveals)
 5. **Phase 5** — Robustness (error screens, disk cache, CI)
 6. **Phase 6** — Stretch (live refresh, commentary, series view, player drill-down)
