@@ -3,10 +3,10 @@
 A polished terminal UI for ESPNCricinfo match scorecards. Paste a full-scorecard
 URL, watch the match render in your terminal with animated text effects.
 
-> Status: **Phase 2 — data layer working.** The CLI scrapes ESPNCricinfo
-> (via curl_cffi + HTML `__NEXT_DATA__`) and returns a typed `Match` model.
-> The Textual UI lands in Phase 3. See [PLAN.md](./PLAN.md) for the full
-> roadmap.
+> Status: **Phase 3 — TUI working.** The default `cricscore <url>` launches
+> a Textual app with batting/bowling tables, fall of wickets, and tab
+> navigation. Polish + text effects land in Phase 4. See [PLAN.md](./PLAN.md)
+> for the full roadmap.
 
 ## Requirements
 
@@ -26,21 +26,27 @@ pip install -e ".[dev]"
 ## Usage
 
 ```bash
-# Human-readable summary
+# Launch the TUI (default)
 cricscore "https://www.espncricinfo.com/series/ipl-2026-1510719/kolkata-knight-riders-vs-delhi-capitals-70th-match-1529313/full-scorecard"
-# 70th Match — Eden Gardens, Kolkata
-#   DC won by 40 runs
-#   Delhi Capitals: 203/5
-#   Kolkata Knight Riders: 163  (18.4/20 ov, T:204)
-#     DC 203/5 in 20.0 overs (batters 11, fow 5)
-#     KKR 163/10 in 18.4 overs (batters 11, fow 10)
 
-# Full structured data
+# Or open the in-app URL paste screen
+cricscore
+
+# Non-interactive: human-readable summary
+cricscore --summary "<url>"
+
+# Non-interactive: full structured data
 cricscore --json "<url>" | jq .
 ```
 
-After Phase 3 the same command will open the TUI and render the full
-scorecard.
+### Key bindings (TUI)
+
+| Key   | Action                  |
+| ----- | ----------------------- |
+| `n`   | Next innings tab        |
+| `p`   | Previous innings tab    |
+| `tab` | Cycle focus             |
+| `q`   | Quit                    |
 
 ## Development
 
@@ -56,7 +62,8 @@ See [PLAN.md](./PLAN.md) for the full multi-phase plan. In short:
 
 1. **Phase 1** — Scaffolding + URL parser ✅
 2. **Phase 2** — Data layer (curl_cffi + HTML `__NEXT_DATA__` + pydantic models) ✅
-3. **Phase 3** — TUI skeleton (header, batting & bowling tables, fall of wickets) ← *next*
+3. **Phase 3** — TUI skeleton (header, batting & bowling tables, fall of wickets) ✅
+4. **Phase 4** — Text effects & polish (typewriter, gradients, animated reveals) ← *next*
 4. **Phase 4** — Text effects & polish (typewriter, gradients, animated reveals)
 5. **Phase 5** — Robustness (error screens, disk cache, CI)
 6. **Phase 6** — Stretch (live refresh, commentary, series view, player drill-down)

@@ -112,17 +112,22 @@ Empirical reality at fetch time (May 2026): the `hs-consumer-api.espncricinfo.co
 
 **Acceptance:** `pytest -q` reports 27 passed; `cricscore <ipl-url>` prints "DC won by 40 runs" with both team scores and innings totals.
 
-#### Phase 3 — TUI skeleton + scorecard render
+#### Phase 3 — TUI skeleton + scorecard render ✅ shipped
 
-- `tui/app.py` boots `CricScoreApp`. If a URL is passed on the CLI it routes straight to `LoadingScreen`; otherwise `URLInputScreen` shows an Input widget.
-- `LoadingScreen` shows a centered Rich spinner with a typewriter status line ("Resolving series 1510719…", "Fetching scorecard…").
-- `ScorecardScreen` lays out:
-  - **Header** (`MatchHeader`): teams, format, venue, toss, result, with a subtle gradient title.
-  - **Innings tabs** (one tab per innings via `TabbedContent`).
-  - Each tab contains `InningsPanel` = `BattingTable` + `BowlingTable` + `FowStrip`.
-- `styles.tcss` defines the palette (deep navy + warm orange accent, easy to retheme).
+- `tui/app.py` (`CricScoreApp`): routes to `ScorecardScreen` if a `Match` is provided (tests), to `LoadingScreen` if a `MatchRef` is provided (CLI URL), or to `URLInputScreen` otherwise.
+- `tui/screens/loading.py`: runs the curl_cffi fetch + pydantic parsing in a threaded Textual worker, then `switch_screen` to the scorecard. Error label shown if the fetch fails.
+- `tui/screens/scorecard.py`: `MatchHeader` + `TabbedContent` over innings. Tab labels include team + score (`"DC 203/5"`, `"KKR 163/10"`). `n`/`p` cycle tabs; `q` quits.
+- `tui/screens/url_input.py`: in-app URL paste — Input widget, validates with `parse_match_url`, switches to `LoadingScreen` on success.
+- `tui/widgets/match_header.py`: title + format + status + venue + per-team score lines + PotM, all styled via Rich `Text` runs.
+- `tui/widgets/batting_table.py`: `DataTable` with Batter / How out / R / B / 4s / 6s / SR; trailing rows for extras, total, and did-not-bat. 50+ scorers get a bold accent.
+- `tui/widgets/bowling_table.py`: `DataTable` with O / M / R / W / Econ / WD / NB; 3-fer bowlers highlighted.
+- `tui/widgets/fow_strip.py`: single-line fall-of-wickets summary, auto-hidden when empty.
+- `tui/widgets/innings_panel.py`: `VerticalScroll` wrapping the three widgets above with section labels.
+- `tui/styles.tcss`: deep-navy surface + warm-orange accent palette; custom vars are prefixed `$cs-` to avoid clobbering Textual's built-in tokens (we hit a real bug here — `$panel` is reserved).
+- CLI: default action is TUI launch; `--summary` and `--json` retain the Phase 2 non-interactive paths; URL is optional (no-URL → URL input screen).
+- `tests/test_tui_smoke.py`: 5 headless tests via `App.run_test` covering scorecard mount, tab count, batting-table rows, URL input fallback, and the `q` binding.
 
-**Acceptance:** `cricscore <url>` opens the TUI and renders the KKR vs DC scorecard with batting and bowling tables fully populated. `q` quits.
+**Acceptance:** 32 tests passing. Headless render of the IPL match produces a `MatchHeader` for match id 125458, two innings tabs, 10 batting rows (7 batters + extras + total + DNB) and 6 bowling rows in the first innings, and `n` cycles tabs.
 
 #### Phase 4 — Text effects & polish
 

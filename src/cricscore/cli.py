@@ -1,8 +1,9 @@
 """CricScore command-line entry point.
 
-Phase 2 wires the URL parser into the curl_cffi scraper and pydantic models.
-With ``--json`` the parsed :class:`Match` is dumped as JSON; without it, a
-small human-readable summary is printed. The TUI render lands in Phase 3.
+Default: launch the Textual TUI for the given URL.
+``--json``: skip the TUI, print parsed match data as JSON.
+``--summary``: skip the TUI, print a one-screen human summary.
+No URL: launch the TUI on the URL input screen.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from cricscore.url_parser import InvalidUrlError, parse_match_url
 
 app = typer.Typer(
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
     help="CricScore — a polished TUI for ESPNCricinfo scorecards.",
 )
 
@@ -31,30 +32,51 @@ _err_console = Console(stderr=True, style="bold red")
 @app.command()
 def main(
     url: str = typer.Argument(
-        ...,
-        metavar="URL",
-        help="ESPNCricinfo full-scorecard URL.",
+        None,
+        metavar="[URL]",
+        help="ESPNCricinfo full-scorecard URL. Omit to open the in-app input screen.",
     ),
     as_json: bool = typer.Option(
         False,
         "--json",
-        help="Print the parsed match as JSON instead of a summary.",
+        help="Skip the TUI; print the parsed match as JSON.",
+    ),
+    summary: bool = typer.Option(
+        False,
+        "--summary",
+        help="Skip the TUI; print a one-screen human summary.",
     ),
     show_version: bool = typer.Option(
         False, "--version", help="Print the installed CricScore version and exit."
     ),
 ) -> None:
-    """Parse an ESPNCricinfo URL, fetch the scorecard, and (eventually) render it."""
+    """Default action launches the TUI; use --json or --summary for non-interactive output."""
     if show_version:
         _console.print(f"cricscore {__version__}")
         raise typer.Exit()
 
-    try:
-        match_ref = parse_match_url(url)
-    except InvalidUrlError as exc:
-        _err_console.print(f"Invalid URL: {exc}")
-        raise typer.Exit(code=2) from None
+    match_ref = None
+    if url:
+        try:
+            match_ref = parse_match_url(url)
+        except InvalidUrlError as exc:
+            _err_console.print(f"Invalid URL: {exc}")
+            raise typer.Exit(code=2) from None
 
+    if as_json or summary:
+        if match_ref is None:
+            _err_console.print("--json and --summary require a URL argument.")
+            raise typer.Exit(code=2)
+        _run_non_interactive(match_ref, as_json=as_json)
+        return
+
+    # Default: launch the TUI.
+    from cricscore.tui.app import CricScoreApp
+
+    CricScoreApp(match_ref=match_ref).run()
+
+
+def _run_non_interactive(match_ref, *, as_json: bool) -> None:
     client = ESPNCricinfoClient()
     try:
         raw = client.fetch_scorecard(match_ref)
@@ -64,16 +86,15 @@ def main(
 
     try:
         match = Match.from_scorecard_payload(raw)
-    except Exception as exc:  # pydantic ValidationError or shape errors
+    except Exception as exc:
         _err_console.print(f"Could not parse scorecard payload: {exc}")
         raise typer.Exit(code=4) from None
 
     if as_json:
         json.dump(match.model_dump(mode="json"), sys.stdout, indent=2, ensure_ascii=False)
         sys.stdout.write("\n")
-        return
-
-    _print_summary(match)
+    else:
+        _print_summary(match)
 
 
 def _print_summary(match: Match) -> None:
@@ -96,7 +117,6 @@ def _print_summary(match: Match) -> None:
             f"    [bold]{name}[/] {runs}/{wkts} in {overs} overs "
             f"(batters {len(inn.batting_lineup)}, fow {len(inn.fall_of_wickets)})"
         )
-    _console.print("[dim]TUI render coming in Phase 3.[/]")
 
 
 if __name__ == "__main__":

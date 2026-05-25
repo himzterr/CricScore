@@ -1,0 +1,172 @@
+/* CricScore — global theme.
+ *
+ * Palette: deep midnight navy ground, warm orange accent. Custom vars are
+ * prefixed `$cs-` to avoid clashing with Textual's built-in design tokens
+ * (e.g. `$panel` is a Textual reserved color used by internal widgets).
+ */
+
+$cs-accent: #f59f3a;
+$cs-accent-dim: #b87425;
+$cs-surface: #0f1622;
+$cs-panel: #182232;
+$cs-panel-soft: #1f2c40;
+$cs-text-soft: #9aa6bd;
+$cs-text-mute: #5b6981;
+$cs-danger: #f05a5a;
+$cs-success: #5dd39e;
+
+Screen {
+    background: $cs-surface;
+}
+
+/* ---------- LoadingScreen ---------- */
+
+LoadingScreen {
+    align: center middle;
+}
+
+LoadingScreen #loading-card {
+    width: 60;
+    height: 9;
+    border: round $cs-accent;
+    padding: 1 2;
+    background: $cs-panel;
+    align: center middle;
+    content-align: center middle;
+}
+
+LoadingScreen #loading-status {
+    color: $cs-text-soft;
+    text-align: center;
+    margin-top: 1;
+}
+
+LoadingScreen LoadingIndicator {
+    color: $cs-accent;
+    height: 1;
+}
+
+LoadingScreen #loading-error {
+    color: $cs-danger;
+    text-align: center;
+    margin-top: 1;
+    display: none;
+}
+
+LoadingScreen.errored #loading-error {
+    display: block;
+}
+
+LoadingScreen.errored LoadingIndicator {
+    display: none;
+}
+
+/* ---------- URLInputScreen ---------- */
+
+URLInputScreen {
+    align: center middle;
+}
+
+URLInputScreen #url-card {
+    width: 80;
+    height: 11;
+    border: round $cs-accent;
+    padding: 1 2;
+    background: $cs-panel;
+}
+
+URLInputScreen #url-title {
+    color: $cs-accent;
+    text-style: bold;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+URLInputScreen #url-input {
+    border: tall $cs-panel-soft;
+    background: $cs-surface;
+}
+
+URLInputScreen #url-error {
+    color: $cs-danger;
+    text-align: center;
+    margin-top: 1;
+    display: none;
+}
+
+URLInputScreen.errored #url-error {
+    display: block;
+}
+
+URLInputScreen #url-hint {
+    color: $cs-text-mute;
+    text-align: center;
+    margin-top: 1;
+}
+
+/* ---------- ScorecardScreen ---------- */
+
+ScorecardScreen {
+    layout: vertical;
+}
+
+MatchHeader {
+    height: auto;
+    border: round $cs-accent-dim;
+    padding: 1 2;
+    background: $cs-panel;
+    margin: 1 2 0 2;
+}
+
+TabbedContent {
+    height: 1fr;
+    margin: 1 2 1 2;
+}
+
+TabPane {
+    padding: 0 1;
+}
+
+InningsPanel {
+    layout: vertical;
+    height: 1fr;
+}
+
+InningsPanel .section-heading {
+    color: $cs-accent;
+    text-style: bold;
+    margin-top: 1;
+}
+
+DataTable {
+    background: $cs-panel;
+    height: auto;
+    margin-top: 0;
+}
+
+DataTable > .datatable--header {
+    background: $cs-panel-soft;
+    color: $cs-accent;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $cs-accent-dim;
+}
+
+FowStrip {
+    height: auto;
+    color: $cs-text-soft;
+    background: $cs-panel;
+    border: round $cs-panel-soft;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+FowStrip.empty {
+    display: none;
+}
+
+Footer {
+    background: $cs-panel;
+}
