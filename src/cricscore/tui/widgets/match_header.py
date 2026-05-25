@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Static
 
 from cricscore.effects import TypewriterLabel, gradient_text, sparkline
 from cricscore.models import Match
+from cricscore.tui.widgets.team_logo import TeamLogo
 
 _ACCENT = "#f59f3a"
 _ACCENT_BRIGHT = "#ffd16e"
@@ -86,6 +87,26 @@ class MatchHeader(Vertical):
 
     def compose(self) -> ComposeResult:
         m = self.match
+
+        # Logos row — only renders when we have two teams with abbreviations.
+        teams = [ts for ts in m.teams if ts.team and ts.team.abbreviation]
+        if len(teams) >= 2:
+            left, right = teams[0], teams[1]
+            with Horizontal(classes="logos-row"):
+                yield TeamLogo(
+                    left.team.abbreviation if left.team else None,
+                    left.team.primary_color if left.team else None,
+                    classes="team-logo",
+                )
+                yield Static(
+                    Text("vs", style=f"bold {_DIM}"),
+                    classes="logos-vs",
+                )
+                yield TeamLogo(
+                    right.team.abbreviation if right.team else None,
+                    right.team.primary_color if right.team else None,
+                    classes="team-logo",
+                )
 
         yield TypewriterLabel(
             self._title_text(),

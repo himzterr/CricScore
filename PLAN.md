@@ -130,6 +130,14 @@ Empirical reality at fetch time (May 2026): the `hs-consumer-api.espncricinfo.co
 **Acceptance:** 32 tests passing. Headless render of the IPL match produces a `MatchHeader` for match id 125458, two innings tabs, 10 batting rows (7 batters + extras + total + DNB) and 6 bowling rows in the first innings, and `n` cycles tabs.
 
 #### Phase 4 — Text effects & polish ✅ shipped
+#### Phase 4.5 — Team logos in the header
+
+- New `pyfiglet>=1.0` dependency.
+- `tui/widgets/team_logo.py` — `TeamLogo(Static)` renders the team abbreviation via the `smblock` figlet font (4 rows of Unicode block characters), tinted with the team's `primary_color` from ESPNCricinfo and softly graded ~25 % darker top→bottom for depth.
+- `MatchHeader` gets a `logos-row` at the very top: `[<team1 logo>] vs [<team2 logo>]`, centered. The rest of the header stacks below unchanged.
+- Tab-switch replay logic untouched — the logos sit above the tabs.
+
+Validated visually for DC (`#FA8C16`), KKR (`#0860C4`), MI (`#004BA0`), RR (`#EA1A85`), CSK (`#FFE000`), and RCB (`#DA1818`) — every primary brand color reads correctly. 56 tests passing.
 
 - `cricscore/effects/typewriter.py` — `TypewriterLabel` (Static subclass) reveals text character-by-character on a self-cancelling timer; `reset_to(text)` restarts with a new phrase.
 - `cricscore/effects/gradient.py` — `gradient_text(text, start, end, *, bold)` returns a `rich.text.Text` with per-character RGB interpolation. Used on scores and totals.

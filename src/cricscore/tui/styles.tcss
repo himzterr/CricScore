@@ -131,6 +131,25 @@ MatchHeader .match-spacer {
     height: 1;
 }
 
+MatchHeader .logos-row {
+    align: center middle;
+    height: 4;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+MatchHeader .team-logo {
+    width: auto;
+    height: 4;
+}
+
+MatchHeader .logos-vs {
+    width: 4;
+    height: 4;
+    content-align: center middle;
+    margin: 0 2;
+}
+
 TabbedContent {
     height: 1fr;
     margin: 1 2 1 2;
