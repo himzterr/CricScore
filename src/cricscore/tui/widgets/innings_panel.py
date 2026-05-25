@@ -27,3 +27,12 @@ class InningsPanel(VerticalScroll):
         yield Label("Bowling", classes="section-heading")
         yield BowlingTable(self.innings)
         yield FowStrip(self.innings)
+
+    def replay(self) -> None:
+        """Re-trigger the reveal animations — used on tab activation."""
+        for table in self.query(BattingTable):
+            table.replay()
+        for table in self.query(BowlingTable):
+            table.replay()
+        for strip in self.query(FowStrip):
+            strip.replay()

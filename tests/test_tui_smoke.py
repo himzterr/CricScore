@@ -86,6 +86,45 @@ async def test_quit_binding_exits(match: Match) -> None:
 
 
 @pytest.mark.asyncio
+async def test_replay_animation_fires_on_tab_switch(match: Match) -> None:
+    """Verifies that pressing n/p triggers InningsPanel.replay() so the
+    user sees the typewriter-style row reveal again on the new innings.
+    The headless pilot fast-forwards timers so we can't observe the
+    mid-stagger state — instead we count replay() invocations.
+    """
+    from cricscore.tui.widgets.innings_panel import InningsPanel
+
+    panels_replayed: list[int] = []
+    original = InningsPanel.replay
+
+    def tracker(self):
+        panels_replayed.append(self.innings.inning_number)
+        return original(self)
+
+    InningsPanel.replay = tracker
+    try:
+        app = CricScoreApp(match=match)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            panels_replayed.clear()
+
+            await pilot.press("n")
+            await pilot.pause()
+            assert panels_replayed == [2], (
+                "pressing n should replay innings 2 once"
+            )
+
+            panels_replayed.clear()
+            await pilot.press("p")
+            await pilot.pause()
+            assert panels_replayed == [1], (
+                "pressing p should replay innings 1 once"
+            )
+    finally:
+        InningsPanel.replay = original
+
+
+@pytest.mark.asyncio
 async def test_tab_navigation_works_when_datatable_focused(match: Match) -> None:
     """Reproduces the user-reported bug: with focus on a batting DataTable,
     pressing 'n' should still switch innings."""

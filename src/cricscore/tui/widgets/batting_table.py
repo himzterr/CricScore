@@ -74,6 +74,9 @@ class BattingTable(DataTable):
             Text("6s", justify="right"),
             Text("SR", justify="right"),
         )
+        self._start_reveal()
+
+    def _start_reveal(self) -> None:
         self._pending = list(self._build_rows())
         if not self._pending:
             return
@@ -91,6 +94,14 @@ class BattingTable(DataTable):
                 self._reveal_timer = None
             return
         self.add_row(*self._pending.pop(0))
+
+    def replay(self) -> None:
+        """Clear and re-stream the rows — invoked on tab activation."""
+        if self._reveal_timer is not None:
+            self._reveal_timer.stop()
+            self._reveal_timer = None
+        self.clear()
+        self._start_reveal()
 
     def _build_rows(self):
         for batter in self.innings.batting_lineup:

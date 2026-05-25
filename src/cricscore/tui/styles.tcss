@@ -174,10 +174,21 @@ FowStrip {
     border: round $cs-panel-soft;
     padding: 0 1;
     margin-top: 1;
+    layout: horizontal;
 }
 
 FowStrip.empty {
     display: none;
+}
+
+FowStrip .fow-heading {
+    width: auto;
+    height: 1;
+}
+
+FowStrip .fow-line {
+    width: 1fr;
+    height: 1;
 }
 
 Footer {

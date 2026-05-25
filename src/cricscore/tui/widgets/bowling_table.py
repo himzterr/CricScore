@@ -1,4 +1,4 @@
-"""Bowling card for one innings."""
+"""Bowling card for one innings — staggered row reveal + replay on tab switch."""
 
 from __future__ import annotations
 
@@ -17,11 +17,19 @@ def _fmt(value: int | float | None, precision: int | None = None) -> str:
 
 
 class BowlingTable(DataTable):
-    """DataTable populated from one innings' bowling lineup."""
+    """DataTable populated from one innings' bowling lineup.
+
+    Rows reveal on a stagger timer; ``replay()`` restarts the animation
+    when the parent tab is re-activated.
+    """
+
+    REVEAL_INTERVAL = 0.035
 
     def __init__(self, innings: Innings, *, id: str | None = None) -> None:
         super().__init__(id=id, show_cursor=True, zebra_stripes=True)
         self.innings = innings
+        self._pending: list[tuple[Text, ...]] = []
+        self._reveal_timer = None
 
     def on_mount(self) -> None:
         self.cursor_type = "row"
@@ -35,12 +43,14 @@ class BowlingTable(DataTable):
             Text("WD", justify="right"),
             Text("NB", justify="right"),
         )
+        self._start_reveal()
 
+    def _build_rows(self):
         for bowler in self.innings.bowled_lineup:
             name = bowler.player.long_name or bowler.player.name or "?"
             wickets = bowler.wickets or 0
             name_style = "bold #f59f3a" if wickets >= 3 else ""
-            self.add_row(
+            yield (
                 Text(name, style=name_style),
                 Text(_fmt(bowler.overs, 1), justify="right"),
                 Text(_fmt(bowler.maidens), justify="right"),
@@ -50,3 +60,35 @@ class BowlingTable(DataTable):
                 Text(_fmt(bowler.wides), justify="right"),
                 Text(_fmt(bowler.noballs), justify="right"),
             )
+
+    def _start_reveal(self) -> None:
+        self._pending = list(self._build_rows())
+        if not self._pending:
+            return
+        self.add_row(*self._pending.pop(0))
+        if self._pending:
+            self._reveal_timer = self.set_interval(
+                self.REVEAL_INTERVAL, self._reveal_next
+            )
+
+    def _reveal_next(self) -> None:
+        if not self._pending:
+            if self._reveal_timer is not None:
+                self._reveal_timer.stop()
+                self._reveal_timer = None
+            return
+        self.add_row(*self._pending.pop(0))
+
+    def replay(self) -> None:
+        """Clear and re-stream the rows — invoked on tab activation."""
+        if self._reveal_timer is not None:
+            self._reveal_timer.stop()
+            self._reveal_timer = None
+        # ``clear()`` keeps columns intact; only the row data is removed.
+        self.clear()
+        self._start_reveal()
+
+    def on_unmount(self) -> None:
+        if self._reveal_timer is not None:
+            self._reveal_timer.stop()
+            self._reveal_timer = None

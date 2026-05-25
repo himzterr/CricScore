@@ -24,6 +24,9 @@ class ScorecardScreen(Screen):
     def __init__(self, match: Match) -> None:
         super().__init__()
         self.match = match
+        # The first innings already animates from its mount-time reveal —
+        # we suppress the redundant replay that TabActivated would fire.
+        self._suppress_next_activation = True
 
     def compose(self) -> ComposeResult:
         yield MatchHeader(self.match)
@@ -69,3 +72,26 @@ class ScorecardScreen(Screen):
             focusables[0].focus()
         else:
             self.set_focus(None)
+
+    def on_tabbed_content_tab_activated(
+        self, event: TabbedContent.TabActivated
+    ) -> None:
+        """Replay the reveal animation on the newly-active innings.
+
+        Triggers on both keyboard nav (n/p) and mouse clicks on the tab bar.
+        The first activation right after mount is suppressed so we don't
+        double-animate over the initial reveal.
+        """
+        if self._suppress_next_activation:
+            self._suppress_next_activation = False
+            return
+        tabs = event.tabbed_content
+        active_id = tabs.active
+        if not active_id:
+            return
+        try:
+            active_pane = tabs.query_one(f"#{active_id}", TabPane)
+        except Exception:
+            return
+        for panel in active_pane.query(InningsPanel):
+            panel.replay()
