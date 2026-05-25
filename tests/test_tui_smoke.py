@@ -83,3 +83,36 @@ async def test_quit_binding_exits(match: Match) -> None:
         await pilot.pause()
         await pilot.press("q")
     # If `q` did not quit, run_test would have hung; reaching here is the test.
+
+
+@pytest.mark.asyncio
+async def test_tab_navigation_works_when_datatable_focused(match: Match) -> None:
+    """Reproduces the user-reported bug: with focus on a batting DataTable,
+    pressing 'n' should still switch innings."""
+    app = CricScoreApp(match=match)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        from textual.widgets import TabbedContent
+
+        from cricscore.tui.widgets import BattingTable
+
+        tabs = app.screen.query_one(TabbedContent)
+        assert tabs.active == "innings-1"
+
+        # Force focus onto the first batting table — this is what happens in
+        # a real terminal as soon as the user clicks or tab-keys into it.
+        batting_tables = list(app.screen.query(BattingTable))
+        assert batting_tables, "expected at least one BattingTable mounted"
+        batting_tables[0].focus()
+        await pilot.pause()
+        assert app.focused is batting_tables[0]
+
+        # Now press 'n' — without priority bindings the DataTable would have
+        # swallowed this and the active tab would remain 'innings-1'.
+        await pilot.press("n")
+        await pilot.pause()
+        assert tabs.active == "innings-2", "priority binding should switch tabs"
+
+        await pilot.press("p")
+        await pilot.pause()
+        assert tabs.active == "innings-1"
