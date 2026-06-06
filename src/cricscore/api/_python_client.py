@@ -109,3 +109,123 @@ def extract_next_data(html: str) -> dict[str, Any]:
             "__NEXT_DATA__ payload did not contain a 'match' key"
         )
     return data
+
+
+def extract_live_data(html: str) -> dict[str, Any]:
+    """Pull the live-page inner data dict out of a ``live-cricket-score`` HTML page.
+
+    The live page nests one level deeper than the scorecard page::
+
+        props.appPageProps.data          # outer dict
+          └─ data                        # inner dict  ← returned here
+               ├─ match                 # match metadata + live fields
+               └─ content               # livePerformance, supportInfo, …
+
+    Public for tests: lets us validate parsing against a saved HTML fixture
+    without making a live network call.
+    """
+    re_match = _NEXT_DATA_RE.search(html)
+    if not re_match:
+        raise ScorecardFetchError(
+            "Could not locate __NEXT_DATA__ in the live-cricket-score HTML"
+        )
+    try:
+        payload = json.loads(re_match.group("json"))
+    except json.JSONDecodeError as exc:
+        raise ScorecardFetchError(f"__NEXT_DATA__ was not valid JSON: {exc}") from exc
+
+    try:
+        outer: dict[str, Any] = payload["props"]["appPageProps"]["data"]
+        # Live page wraps everything in an extra "data" key alongside
+        # "sponsoredFeatures".  Scorecard page has "match" directly at this
+        # level; we accept both so callers don't have to branch.
+        if "match" not in outer and isinstance(outer.get("data"), dict):
+            inner: dict[str, Any] = outer["data"]
+        else:
+            inner = outer
+    except (KeyError, TypeError) as exc:
+        raise ScorecardFetchError(
+            f"__NEXT_DATA__ structure missing expected path "
+            f"props.appPageProps.data: {exc}"
+        ) from exc
+
+    if not isinstance(inner, dict) or "match" not in inner:
+        raise ScorecardFetchError(
+            "__NEXT_DATA__ live payload did not contain a 'match' key"
+        )
+    return inner
+
+
+def _live_page_url(series_id: int, match_id: int) -> str:
+    """Build a live-cricket-score page URL. Slugs are placeholders — ESPN redirects."""
+    return (
+        f"https://www.espncricinfo.com/series/x-{series_id}/y-{match_id}/live-cricket-score"
+    )
+
+
+def _commentary_page_url(series_id: int, match_id: int) -> str:
+    """Build a ball-by-ball-commentary page URL. Slugs are placeholders — ESPN redirects."""
+    return (
+        f"https://www.espncricinfo.com/series/x-{series_id}/y-{match_id}/ball-by-ball-commentary"
+    )
+
+
+def python_fetch_raw_live(
+    series_id: int, match_id: int, timeout: float = 15.0
+) -> dict[str, Any]:
+    """Fetch + parse the live match payload from the ``live-cricket-score`` HTML page.
+
+    Returns the inner data dict containing ``match`` and ``content`` (with
+    ``supportInfo.liveSummary``, ``livePerformance``, etc.) — the slice that
+    :class:`cricscore.models.match.LiveState` consumes.
+    """
+    from curl_cffi import requests  # type: ignore[import-not-found]
+
+    session = requests.Session(impersonate="chrome131")
+    try:
+        session.get(_HOMEPAGE_URL, headers=_BROWSER_HEADERS, timeout=timeout)
+        page_url = _live_page_url(series_id, match_id)
+        response = session.get(page_url, headers=_BROWSER_HEADERS, timeout=timeout)
+    except Exception as exc:
+        raise ScorecardFetchError(f"Network error fetching live page: {exc}") from exc
+
+    if response.status_code != 200:
+        raise ScorecardFetchError(
+            f"Live page returned HTTP {response.status_code} "
+            f"for series_id={series_id} match_id={match_id}"
+        )
+
+    return extract_live_data(response.text)
+
+
+def python_fetch_raw_commentary(
+    series_id: int, match_id: int, timeout: float = 15.0
+) -> dict[str, Any]:
+    """Fetch + parse the commentary payload from the ``ball-by-ball-commentary`` HTML page.
+
+    Returns the inner data dict containing ``match`` and ``content`` (with
+    ``content.comments`` — the ball-by-ball delivery list) — the slice that
+    :class:`cricscore.models.match.Commentary` consumes.
+
+    The page uses the same ``data.data`` nesting as the live page, so we
+    reuse :func:`extract_live_data` for parsing.
+    """
+    from curl_cffi import requests  # type: ignore[import-not-found]
+
+    session = requests.Session(impersonate="chrome131")
+    try:
+        session.get(_HOMEPAGE_URL, headers=_BROWSER_HEADERS, timeout=timeout)
+        page_url = _commentary_page_url(series_id, match_id)
+        response = session.get(page_url, headers=_BROWSER_HEADERS, timeout=timeout)
+    except Exception as exc:
+        raise ScorecardFetchError(
+            f"Network error fetching commentary page: {exc}"
+        ) from exc
+
+    if response.status_code != 200:
+        raise ScorecardFetchError(
+            f"Commentary page returned HTTP {response.status_code} "
+            f"for series_id={series_id} match_id={match_id}"
+        )
+
+    return extract_live_data(response.text)

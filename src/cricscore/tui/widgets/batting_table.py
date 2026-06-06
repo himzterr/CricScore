@@ -103,6 +103,11 @@ class BattingTable(DataTable):
         self.clear()
         self._start_reveal()
 
+    def update_innings(self, innings: Innings) -> None:
+        """Swap in fresh innings data and replay the reveal animation."""
+        self.innings = innings
+        self.replay()
+
     def _build_rows(self):
         for batter in self.innings.batting_lineup:
             if batter.batted_type != "yes":

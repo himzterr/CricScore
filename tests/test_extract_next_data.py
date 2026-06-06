@@ -4,7 +4,11 @@ import json
 
 import pytest
 
-from cricscore.api._python_client import ScorecardFetchError, extract_next_data
+from cricscore.api._python_client import (
+    ScorecardFetchError,
+    extract_live_data,
+    extract_next_data,
+)
 
 
 def _wrap_html(next_data_dict: dict) -> str:
@@ -51,3 +55,50 @@ def test_missing_match_key_raises() -> None:
     bad = {"props": {"appPageProps": {"data": {"content": {}}}}}
     with pytest.raises(ScorecardFetchError, match="'match' key"):
         extract_next_data(_wrap_html(bad))
+
+
+# ---------- extract_live_data ----------
+
+def test_extract_live_data_nested_shape() -> None:
+    """Live page wraps data one level deeper than scorecard page."""
+    payload = {
+        "props": {
+            "appPageProps": {
+                "data": {
+                    "sponsoredFeatures": [],
+                    "data": {
+                        "match": {"id": 99, "state": "LIVE"},
+                        "content": {"supportInfo": {}},
+                    },
+                }
+            }
+        }
+    }
+    result = extract_live_data(_wrap_html(payload))
+    assert result["match"]["id"] == 99
+    assert result["match"]["state"] == "LIVE"
+
+
+def test_extract_live_data_flat_shape() -> None:
+    """If data already has 'match' at the outer level (scorecard shape), accept it."""
+    payload = {
+        "props": {
+            "appPageProps": {
+                "data": {"match": {"id": 77}, "content": {}}
+            }
+        }
+    }
+    result = extract_live_data(_wrap_html(payload))
+    assert result["match"]["id"] == 77
+
+
+def test_extract_live_data_missing_match_raises() -> None:
+    bad = {
+        "props": {
+            "appPageProps": {
+                "data": {"data": {"content": {}}}
+            }
+        }
+    }
+    with pytest.raises(ScorecardFetchError, match="'match' key"):
+        extract_live_data(_wrap_html(bad))

@@ -23,14 +23,17 @@ _MATCH_SEGMENT = re.compile(r"^(?P<slug>.+)-(?P<id>\d+)$")
 
 
 def parse_match_url(url: str) -> MatchRef:
-    """Parse an ESPNCricinfo full-scorecard URL into a MatchRef.
+    """Parse an ESPNCricinfo match URL into a MatchRef.
 
-    Accepts URLs shaped like:
+    Accepts any match sub-page URL shaped like::
+
         https://www.espncricinfo.com/series/<series-slug>-<series_id>/
-            <match-slug>-<match_id>/full-scorecard
+            <match-slug>-<match_id>/<sub-page>
 
-    Trailing segments after ``full-scorecard`` (query strings, fragments) are
-    ignored. Raises :class:`InvalidUrlError` for anything else.
+    where ``<sub-page>`` is any suffix (``full-scorecard``,
+    ``live-cricket-score``, ``ball-by-ball-commentary``, etc.).  Query strings
+    and fragments are ignored.  Raises :class:`InvalidUrlError` for anything
+    that doesn't contain both a valid series id and a valid match id.
     """
     if not isinstance(url, str) or not url.strip():
         raise InvalidUrlError("URL must be a non-empty string")
@@ -42,11 +45,11 @@ def parse_match_url(url: str) -> MatchRef:
         raise InvalidUrlError(f"Not an espncricinfo.com URL: {parsed.netloc!r}")
 
     segments = [seg for seg in parsed.path.split("/") if seg]
-    # Expected shape: ['series', '<slug>-<id>', '<slug>-<id>', 'full-scorecard', ...]
-    if len(segments) < 4 or segments[0] != "series" or "full-scorecard" not in segments[3:4]:
+    # Expected shape: ['series', '<slug>-<id>', '<slug>-<id>', '<sub-page>', ...]
+    if len(segments) < 3 or segments[0] != "series":
         raise InvalidUrlError(
-            "URL does not match the espncricinfo full-scorecard pattern: "
-            "/series/<slug>-<id>/<slug>-<id>/full-scorecard"
+            "URL does not look like an ESPNCricinfo match URL: "
+            "expected /series/<series-slug>-<id>/<match-slug>-<id>/<sub-page>"
         )
 
     series_match = _SERIES_SEGMENT.match(segments[1])

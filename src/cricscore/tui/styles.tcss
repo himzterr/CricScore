@@ -133,26 +133,141 @@ MatchHeader .match-spacer {
 
 MatchHeader .logos-row {
     align: center middle;
-    height: 4;
+    height: auto;
     width: 1fr;
     margin-bottom: 1;
 }
 
 MatchHeader .team-logo {
     width: auto;
-    height: 4;
+    height: auto;
 }
 
 MatchHeader .logos-vs {
     width: 4;
-    height: 4;
+    height: auto;
     content-align: center middle;
     margin: 0 2;
 }
 
+/* ---------- LivePanel (replaces MatchHeader when match is LIVE) ---------- */
+
+LivePanel {
+    height: auto;
+    border: round $cs-accent;
+    background: $cs-panel;
+    margin: 1 2 0 2;
+}
+
+LivePanel #live-left {
+    height: auto;
+    width: 3fr;
+    padding: 1 2;
+}
+
+LivePanel #live-right {
+    height: auto;
+    width: 2fr;
+    padding: 1 2;
+    border-left: solid $cs-panel-soft;
+    align: center top;
+}
+
+LivePanel .live-status {
+    height: 1;
+    margin-bottom: 1;
+}
+
+LivePanel .live-score {
+    height: 1;
+    margin-bottom: 1;
+}
+
+LivePanel .live-over {
+    height: 1;
+    color: $cs-text-soft;
+    margin-bottom: 1;
+}
+
+LivePanel .live-section-label {
+    height: 1;
+    margin-top: 1;
+}
+
+LivePanel .live-batter {
+    height: 1;
+}
+
+LivePanel .live-bowler {
+    height: 1;
+}
+
+LivePanel .live-context {
+    height: 1;
+    margin-top: 1;
+    color: $cs-text-soft;
+}
+
+/* ── Over chip tile display (right column) ── */
+
+LivePanel .over-info {
+    width: 1fr;
+    height: 2;
+    content-align: center middle;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+LivePanel #over-chips-wrap {
+    height: auto;
+    width: 1fr;
+    align: center top;
+}
+
+LivePanel .over-chips-row {
+    height: auto;
+    width: auto;
+    margin-bottom: 1;
+}
+
+LivePanel .ball-chip {
+    width: 7;
+    height: 3;
+    content-align: center middle;
+    margin: 0 1;
+    text-style: bold;
+}
+
+LivePanel .chip-dot {
+    border: round $cs-text-mute;
+    color: $cs-text-mute;
+}
+
+LivePanel .chip-wicket {
+    background: $cs-danger;
+    border: round $cs-danger;
+    color: white;
+}
+
+LivePanel .chip-boundary {
+    background: $cs-accent;
+    border: round $cs-accent;
+    color: $cs-surface;
+}
+
+LivePanel .chip-extra {
+    border: round $cs-text-soft;
+    color: $cs-text-soft;
+}
+
+LivePanel .chip-run {
+    border: round $cs-success;
+    color: $cs-success;
+}
+
 TabbedContent {
-    height: 1fr;
-    margin: 1 2 1 2;
+    height: 2fr;
+    margin: 1 2 0 2;
 }
 
 TabPane {
@@ -208,6 +323,32 @@ FowStrip .fow-heading {
 FowStrip .fow-line {
     width: 1fr;
     height: 1;
+}
+
+/* ---------- CommentaryPanel (live matches only) ---------- */
+
+CommentaryPanel {
+    height: 1fr;
+    margin: 1 2 1 2;
+    border: round $cs-accent-dim;
+    background: $cs-panel;
+    overflow-y: auto;
+}
+
+CommentaryPanel .commentary-heading {
+    color: $cs-accent;
+    text-style: bold;
+    margin: 0 0 1 2;
+}
+
+CommentaryPanel .commentary-item {
+    height: auto;
+    padding: 0 2;
+    margin-bottom: 1;
+}
+
+CommentaryPanel .newly-arrived {
+    background: $cs-accent 15%;
 }
 
 Footer {

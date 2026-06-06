@@ -88,6 +88,11 @@ class BowlingTable(DataTable):
         self.clear()
         self._start_reveal()
 
+    def update_innings(self, innings: Innings) -> None:
+        """Swap in fresh innings data and replay the reveal animation."""
+        self.innings = innings
+        self.replay()
+
     def on_unmount(self) -> None:
         if self._reveal_timer is not None:
             self._reveal_timer.stop()

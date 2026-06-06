@@ -25,3 +25,8 @@ def scorecard_page_url(series_id: int, match_id: int) -> str:
 def match_home_page_url(series_id: int, match_id: int) -> str:
     """Match home page URL (toss, status, summary)."""
     return f"{SITE_BASE}/series/x-{series_id}/y-{match_id}/live-cricket-score"
+
+
+def commentary_page_url(series_id: int, match_id: int) -> str:
+    """Ball-by-ball commentary page URL."""
+    return f"{SITE_BASE}/series/x-{series_id}/y-{match_id}/ball-by-ball-commentary"
