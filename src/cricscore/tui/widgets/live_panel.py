@@ -104,7 +104,8 @@ def _over_header_text(balls: list[RecentBall]) -> Text:
     """Two-line header for the over chip column: ordinal over + run count."""
     if not balls:
         return Text("  —\n  —", justify="left")
-    over_num = balls[0].over_number or 0
+    raw_over = balls[0].over_number or 0
+    over_num = raw_over - 1 if raw_over else 0
     total_runs = sum(b.total_runs or 0 for b in balls)
     t = Text(justify="center")
     t.append(_ordinal(over_num) if over_num else "—", style=f"bold {_MUTED}")
@@ -151,7 +152,17 @@ def _bowler_line(bowler: LiveBowler) -> Text:
 def _score_line(live: LiveState) -> Text:
     abbr = live.batting_team_abbreviation or live.batting_team_name or ""
     score = live.current_score or "-"
-    overs = f"{live.live_overs}" if live.live_overs is not None else "-"
+    # Prefer overs_actual from the most recent ball (already cricket notation e.g. 69.5).
+    # Fall back to live_overs which ESPN encodes as 69.05; convert by treating
+    # the fractional part as hundredths-of-ball (0.05 → 5th ball → display ".5").
+    _recent = live.recent_balls[0].overs_actual if live.recent_balls else None
+    if _recent is not None:
+        overs = f"{_recent:.6g}"
+    elif live.live_overs is not None:
+        _ov = live.live_overs
+        overs = f"{int(_ov)}.{round((_ov % 1) * 100)}"
+    else:
+        overs = "-"
     crr = f"{live.info.current_run_rate:.2f}" if live.info and live.info.current_run_rate else "-"
     rrr = (
         f"{live.info.required_run_rate:.2f}"
