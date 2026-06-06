@@ -8,6 +8,7 @@ better sense of progress than a static label.
 from __future__ import annotations
 
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer, Label, LoadingIndicator
@@ -16,6 +17,7 @@ from textual.worker import Worker, WorkerState
 from cricscore.api.client import ESPNCricinfoClient, ScorecardFetchError
 from cricscore.effects import TypewriterLabel
 from cricscore.models import Match
+from cricscore.models.match import Commentary, LiveState
 from cricscore.url_parser import MatchRef
 
 _PHASES: tuple[str, ...] = (
@@ -28,13 +30,16 @@ _PHASE_INTERVAL = 0.9
 
 
 class LoadingScreen(Screen):
-    BINDINGS = [("q", "app.quit", "Quit")]
+    BINDINGS = [
+        Binding("q", "app.quit", "Quit"),
+        Binding("r", "retry", "Retry", show=False),
+    ]
 
     def __init__(self, match_ref: MatchRef) -> None:
         super().__init__()
         self.match_ref = match_ref
         self._phase_index = 0
-        self._phase_timer = None
+        self._phase_timer = None  # type: ignore[var-annotated]
 
     def compose(self) -> ComposeResult:
         with Container(id="loading-card"):
@@ -51,7 +56,17 @@ class LoadingScreen(Screen):
     def on_mount(self) -> None:
         self._fetch()
         # Rotate the status line through the phases until the worker finishes.
-        self._phase_timer = self.set_interval(_PHASE_INTERVAL, self._advance_phase)
+        self._phase_timer = self.set_interval(_PHASE_INTERVAL, self._advance_phase)  # type: ignore[assignment]
+
+    def action_retry(self) -> None:
+        """Re-run the fetch (shown in footer only when errored)."""
+        if not self.has_class("errored"):
+            return
+        self.remove_class("errored")
+        self.query_one("#loading-error", Label).update("")
+        self._phase_index = 0
+        self._fetch()
+        self._phase_timer = self.set_interval(_PHASE_INTERVAL, self._advance_phase)  # type: ignore[assignment]
 
     def _advance_phase(self) -> None:
         if self._phase_index >= len(_PHASES):
@@ -67,10 +82,26 @@ class LoadingScreen(Screen):
     def _fetch(self) -> None:
         ref = self.match_ref
 
-        def work() -> Match:
+        def work() -> tuple[Match, LiveState | None, Commentary | None]:
             client = ESPNCricinfoClient()
             raw = client.fetch_scorecard(ref)
-            return Match.from_scorecard_payload(raw)
+            match = Match.from_scorecard_payload(raw)
+            live: LiveState | None = None
+            commentary: Commentary | None = None
+            if match.is_live:
+                try:
+                    raw_live = client.fetch_live(ref)
+                    live = LiveState.from_live_payload(raw_live)
+                except Exception:
+                    # Live fetch is best-effort — still show the board if it fails.
+                    pass
+                try:
+                    raw_commentary = client.fetch_commentary(ref)
+                    commentary = Commentary.from_commentary_payload(raw_commentary)
+                except Exception:
+                    # Commentary fetch is best-effort — still show the board.
+                    pass
+            return match, live, commentary
 
         self.run_worker(work, name="fetch-scorecard", thread=True, exclusive=True)
 
@@ -81,9 +112,12 @@ class LoadingScreen(Screen):
             self._stop_phase_timer()
             from cricscore.tui.screens.scorecard import ScorecardScreen
 
-            match = event.worker.result
+            result: tuple[Match, LiveState | None, Commentary | None] = event.worker.result  # type: ignore[assignment]
+            match, live, commentary = result
             assert isinstance(match, Match)
-            self.app.switch_screen(ScorecardScreen(match))
+            # Store the match_ref on the app so ScorecardScreen can poll.
+            self.app.match_ref = self.match_ref  # type: ignore[attr-defined]
+            self.app.switch_screen(ScorecardScreen(match, live, commentary))
         elif event.state == WorkerState.ERROR:
             self._stop_phase_timer()
             self._show_error(event.worker.error)
@@ -94,10 +128,11 @@ class LoadingScreen(Screen):
             self._phase_timer = None
 
     def _show_error(self, error: BaseException | None) -> None:
-        if isinstance(error, ScorecardFetchError):
-            message = f"Fetch failed: {error}"
-        else:
-            message = f"Unexpected error: {error}"
+        raw = str(error or "unknown error")
+        # Truncate verbose curl messages to just the first sentence.
+        short = raw.split("\n")[0].split(". See ")[0]
+        if len(short) > 120:
+            short = short[:117] + "…"
         label = self.query_one("#loading-error", Label)
-        label.update(message)
+        label.update(f"{short}  •  press r to retry")
         self.add_class("errored")

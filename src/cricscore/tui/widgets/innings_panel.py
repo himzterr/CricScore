@@ -36,3 +36,18 @@ class InningsPanel(VerticalScroll):
             table.replay()
         for strip in self.query(FowStrip):
             strip.replay()
+
+    def update_innings(self, innings: Innings) -> None:
+        """Swap in fresh innings data and re-run all animations.
+
+        Called by the auto-refresh cycle in :class:`ScorecardScreen` when a
+        new snapshot arrives for a live match.
+        """
+        self.innings = innings
+        for bat_table in self.query(BattingTable):
+            bat_table.update_innings(innings)
+        for bowl_table in self.query(BowlingTable):
+            bowl_table.update_innings(innings)
+        for strip in self.query(FowStrip):
+            strip.innings = innings
+            strip.replay()

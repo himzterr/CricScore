@@ -112,3 +112,11 @@ def test_round_trip_through_json(match: Match) -> None:
 def test_payload_missing_match_key_raises() -> None:
     with pytest.raises(ValueError, match="missing required 'match'"):
         Match.from_scorecard_payload({"content": {}})
+
+
+def test_team_image_url_path_extracted(match: Match) -> None:
+    by_abbr = {ts.team.abbreviation: ts for ts in match.teams if ts.team}
+    dc_path = by_abbr["DC"].team.image_url_path
+    kkr_path = by_abbr["KKR"].team.image_url_path
+    assert dc_path is not None and dc_path.endswith(".logo.png")
+    assert kkr_path is not None and kkr_path.endswith(".logo.png")

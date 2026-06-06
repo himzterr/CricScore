@@ -96,6 +96,7 @@ class MatchHeader(Vertical):
                 yield TeamLogo(
                     left.team.abbreviation if left.team else None,
                     left.team.primary_color if left.team else None,
+                    left.team.image_url_path if left.team else None,
                     classes="team-logo",
                 )
                 yield Static(
@@ -105,6 +106,7 @@ class MatchHeader(Vertical):
                 yield TeamLogo(
                     right.team.abbreviation if right.team else None,
                     right.team.primary_color if right.team else None,
+                    right.team.image_url_path if right.team else None,
                     classes="team-logo",
                 )
 

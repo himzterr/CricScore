@@ -42,6 +42,8 @@ except ImportError:  # pragma: no cover - fallback path is exercised by tests
 #: in lockstep with the Python fallbacks defined below.
 PUBLIC_API: tuple[str, ...] = (
     "fetch_raw_scorecard",
+    "fetch_raw_live",
+    "fetch_raw_commentary",
 )
 
 
@@ -58,3 +60,37 @@ def fetch_raw_scorecard(series_id: int, match_id: int, timeout: float = 15.0) ->
     from cricscore.api._python_client import python_fetch_raw_scorecard
 
     return python_fetch_raw_scorecard(series_id, match_id, timeout)
+
+
+def fetch_raw_live(series_id: int, match_id: int, timeout: float = 15.0) -> dict[str, Any]:
+    """Fetch the raw live match payload from the ``live-cricket-score`` page.
+
+    Returns the inner data dict (``match`` + ``content``) consumed by
+    :class:`cricscore.models.match.LiveState`.
+
+    Routes to the Rust implementation if available, otherwise calls the
+    pure-Python curl_cffi-based fallback.
+    """
+    if _impl is not None and hasattr(_impl, "fetch_raw_live"):
+        return _impl.fetch_raw_live(series_id, match_id, timeout)  # type: ignore[no-any-return]
+
+    from cricscore.api._python_client import python_fetch_raw_live
+
+    return python_fetch_raw_live(series_id, match_id, timeout)
+
+
+def fetch_raw_commentary(series_id: int, match_id: int, timeout: float = 15.0) -> dict[str, Any]:
+    """Fetch the raw ball-by-ball commentary payload from the ``ball-by-ball-commentary`` page.
+
+    Returns the inner data dict (``match`` + ``content``) consumed by
+    :class:`cricscore.models.match.Commentary`.
+
+    Routes to the Rust implementation if available, otherwise calls the
+    pure-Python curl_cffi-based fallback.
+    """
+    if _impl is not None and hasattr(_impl, "fetch_raw_commentary"):
+        return _impl.fetch_raw_commentary(series_id, match_id, timeout)  # type: ignore[no-any-return]
+
+    from cricscore.api._python_client import python_fetch_raw_commentary
+
+    return python_fetch_raw_commentary(series_id, match_id, timeout)

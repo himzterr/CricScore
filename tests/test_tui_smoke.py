@@ -13,9 +13,12 @@ from pathlib import Path
 import pytest
 
 from cricscore.models import Match
+from cricscore.models.match import Commentary, LiveState
 from cricscore.tui.app import CricScoreApp
 
 FIXTURE = Path(__file__).parent / "fixtures" / "scorecard_1529313.json"
+LIVE_FIXTURE = Path(__file__).parent / "fixtures" / "live_1527150.json"
+COMMENTARY_FIXTURE = Path(__file__).parent / "fixtures" / "commentary_1527150.json"
 
 
 @pytest.fixture(scope="module")
@@ -155,3 +158,140 @@ async def test_tab_navigation_works_when_datatable_focused(match: Match) -> None
         await pilot.press("p")
         await pilot.pause()
         assert tabs.active == "innings-1"
+
+
+# ---------------------------------------------------------------------------
+# Live panel tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def live_payload() -> dict:
+    with LIVE_FIXTURE.open() as f:
+        return json.load(f)
+
+
+@pytest.fixture(scope="module")
+def commentary_payload() -> dict:
+    with COMMENTARY_FIXTURE.open() as f:
+        return json.load(f)
+
+
+@pytest.fixture(scope="module")
+def live_match(live_payload: dict) -> Match:
+    """Patch the finished fixture to look like a LIVE match for TUI tests."""
+    with FIXTURE.open() as f:
+        raw = json.load(f)
+    raw["match"]["state"] = "LIVE"
+    return Match.from_scorecard_payload(raw)
+
+
+@pytest.fixture(scope="module")
+def live_state(live_payload: dict) -> LiveState:
+    return LiveState.from_live_payload(live_payload)
+
+
+@pytest.fixture(scope="module")
+def commentary_obj(commentary_payload: dict) -> Commentary:
+    return Commentary.from_commentary_payload(commentary_payload)
+
+
+@pytest.mark.asyncio
+async def test_live_panel_mounts_for_live_match(
+    live_match: Match, live_state: LiveState
+) -> None:
+    """ScorecardScreen shows LivePanel (not MatchHeader) when the match is LIVE."""
+    from cricscore.tui.widgets import LivePanel, MatchHeader
+
+    app = CricScoreApp(match=live_match, live=live_state)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        # LivePanel must be present; MatchHeader must NOT be.
+        panels = list(app.screen.query(LivePanel))
+        assert len(panels) == 1, "LivePanel should be mounted for a LIVE match"
+        headers = list(app.screen.query(MatchHeader))
+        assert len(headers) == 0, "MatchHeader should NOT be present for a LIVE match"
+
+
+@pytest.mark.asyncio
+async def test_match_header_shown_for_finished_match(match: Match) -> None:
+    """ScorecardScreen shows MatchHeader for a POST (finished) match."""
+    from cricscore.tui.widgets import LivePanel, MatchHeader
+
+    app = CricScoreApp(match=match)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        headers = list(app.screen.query(MatchHeader))
+        assert len(headers) == 1
+        live_panels = list(app.screen.query(LivePanel))
+        assert len(live_panels) == 0
+
+
+@pytest.mark.asyncio
+async def test_live_panel_update_state(
+    live_match: Match, live_state: LiveState
+) -> None:
+    """update_state() replaces values without crashing."""
+    from cricscore.tui.widgets import LivePanel
+
+    app = CricScoreApp(match=live_match, live=live_state)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        panel = app.screen.query_one(LivePanel)
+        # Feed the same state back in — should not raise.
+        panel.update_state(live_state)
+        await pilot.pause()
+
+
+# ---------------------------------------------------------------------------
+# Commentary panel tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_commentary_panel_mounts_for_live_match(
+    live_match: Match, live_state: LiveState, commentary_obj: Commentary
+) -> None:
+    """CommentaryPanel is mounted below the scoreboard for a LIVE match."""
+    from cricscore.tui.widgets import CommentaryPanel
+
+    app = CricScoreApp(match=live_match, live=live_state, commentary=commentary_obj)
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        panels = list(app.screen.query(CommentaryPanel))
+        assert len(panels) == 1, "CommentaryPanel should be mounted for a LIVE match"
+
+
+@pytest.mark.asyncio
+async def test_commentary_panel_not_shown_for_finished_match(match: Match) -> None:
+    """CommentaryPanel must NOT appear for a non-live (POST) match."""
+    from cricscore.tui.widgets import CommentaryPanel
+
+    app = CricScoreApp(match=match)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        panels = list(app.screen.query(CommentaryPanel))
+        assert len(panels) == 0, "CommentaryPanel should NOT appear for a POST match"
+
+
+@pytest.mark.asyncio
+async def test_commentary_panel_update_commentary(
+    live_match: Match, live_state: LiveState, commentary_obj: Commentary
+) -> None:
+    """update_commentary() replaces delivery rows without crashing."""
+    from cricscore.tui.widgets import CommentaryPanel
+
+    app = CricScoreApp(match=live_match, live=live_state, commentary=commentary_obj)
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        panel = app.screen.query_one(CommentaryPanel)
+        # Feed the same commentary back — simulates a no-change refresh cycle.
+        panel.update_commentary(commentary_obj)
+        await pilot.pause()
+        # Feed a different Commentary — simulates a new delivery arriving.
+        from cricscore.models.match import Commentary as _Commentary
+        fresh = _Commentary(items=commentary_obj.items[:5])
+        panel.update_commentary(fresh)
+        await pilot.pause()
+        # Panel should still be present and have rows.
+        survivors = list(app.screen.query(CommentaryPanel))
+        assert len(survivors) == 1

@@ -25,7 +25,7 @@ class ESPNCricinfoClient:
     caching, retries, and an injected transport without breaking callers.
     """
 
-    timeout: float = 15.0
+    timeout: float = 30.0
 
     @property
     def backend(self) -> str:
@@ -35,5 +35,27 @@ class ESPNCricinfoClient:
     def fetch_scorecard(self, match_ref: MatchRef) -> dict[str, Any]:
         """Fetch the raw scorecard JSON for the given match."""
         return _native.fetch_raw_scorecard(
+            match_ref.series_id, match_ref.match_id, self.timeout
+        )
+
+    def fetch_live(self, match_ref: MatchRef) -> dict[str, Any]:
+        """Fetch the raw live payload from the ``live-cricket-score`` page.
+
+        Returns the inner data dict containing ``match`` and ``content``
+        (``supportInfo.liveSummary``, ``livePerformance``, etc.).  Pass the
+        result to :meth:`cricscore.models.match.LiveState.from_live_payload`.
+        """
+        return _native.fetch_raw_live(
+            match_ref.series_id, match_ref.match_id, self.timeout
+        )
+
+    def fetch_commentary(self, match_ref: MatchRef) -> dict[str, Any]:
+        """Fetch the raw ball-by-ball commentary payload.
+
+        Returns the inner data dict containing ``match`` and ``content``
+        (``content.comments`` — newest-first delivery list).  Pass the
+        result to :meth:`cricscore.models.match.Commentary.from_commentary_payload`.
+        """
+        return _native.fetch_raw_commentary(
             match_ref.series_id, match_ref.match_id, self.timeout
         )
