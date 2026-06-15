@@ -14,7 +14,8 @@ from textual.screen import Screen
 from textual.widgets import Footer, Label, LoadingIndicator
 from textual.worker import Worker, WorkerState
 
-from cricscore.api.client import ESPNCricinfoClient, ScorecardFetchError
+from cricscore.api.client import ESPNCricinfoClient
+from cricscore.api.live_feed import fetch_match_state
 from cricscore.effects import TypewriterLabel
 from cricscore.models import Match
 from cricscore.models.match import Commentary, LiveState
@@ -83,25 +84,9 @@ class LoadingScreen(Screen):
         ref = self.match_ref
 
         def work() -> tuple[Match, LiveState | None, Commentary | None]:
-            client = ESPNCricinfoClient()
-            raw = client.fetch_scorecard(ref)
-            match = Match.from_scorecard_payload(raw)
-            live: LiveState | None = None
-            commentary: Commentary | None = None
-            if match.is_live:
-                try:
-                    raw_live = client.fetch_live(ref)
-                    live = LiveState.from_live_payload(raw_live)
-                except Exception:
-                    # Live fetch is best-effort — still show the board if it fails.
-                    pass
-                try:
-                    raw_commentary = client.fetch_commentary(ref)
-                    commentary = Commentary.from_commentary_payload(raw_commentary)
-                except Exception:
-                    # Commentary fetch is best-effort — still show the board.
-                    pass
-            return match, live, commentary
+            # Live state and commentary are derived from a single shared fetch
+            # so the live panel and commentary feed never drift apart.
+            return fetch_match_state(ESPNCricinfoClient(), ref)
 
         self.run_worker(work, name="fetch-scorecard", thread=True, exclusive=True)
 

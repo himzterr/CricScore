@@ -107,22 +107,12 @@ class ScorecardScreen(Screen):
 
         def work() -> tuple[Match, LiveState | None, Commentary | None]:
             from cricscore.api.client import ESPNCricinfoClient
+            from cricscore.api.live_feed import fetch_match_state
 
-            client = ESPNCricinfoClient()
-            raw_scorecard = client.fetch_scorecard(match_ref)
-            new_match = Match.from_scorecard_payload(raw_scorecard)
-            new_live: LiveState | None = None
-            new_commentary: Commentary | None = None
-            if new_match.is_live:
-                raw_live = client.fetch_live(match_ref)
-                new_live = LiveState.from_live_payload(raw_live)
-                try:
-                    raw_commentary = client.fetch_commentary(match_ref)
-                    new_commentary = Commentary.from_commentary_payload(raw_commentary)
-                except Exception:
-                    # Commentary fetch is best-effort — don't kill the refresh.
-                    pass
-            return new_match, new_live, new_commentary
+            # Live state and commentary share a single fetch so the live
+            # panel's current-over chips and the commentary feed update in
+            # lockstep (the two ESPN pages can otherwise be a ball apart).
+            return fetch_match_state(ESPNCricinfoClient(), match_ref)
 
         self.run_worker(work, name="live-refresh", thread=True, exclusive=True)
 
