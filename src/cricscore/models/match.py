@@ -501,10 +501,21 @@ class CommentaryItem(_ESPNModel):
 
     # Narrative fields
     title: str | None = None  # e.g. "Kharote to Gill"
-    dismissal_text: str | None = Field(default=None, alias="dismissalText")
+    # ESPN sends ``dismissalText`` as the same structured object as the
+    # scorecard (short/long/commentary/…), but on some pages/older balls it
+    # may be a bare string.  Accept both: a plain string is coerced into a
+    # :class:`DismissalText` carried in ``long``.
+    dismissal_text: DismissalText | None = Field(default=None, alias="dismissalText")
     comment_text_items: list[dict[str, Any]] = Field(
         default_factory=list, alias="commentTextItems"
     )
+
+    @field_validator("dismissal_text", mode="before")
+    @classmethod
+    def _coerce_dismissal_text(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return {"long": value}
+        return value
 
     @property
     def over_label(self) -> str:

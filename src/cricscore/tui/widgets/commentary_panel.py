@@ -57,7 +57,9 @@ def _render_item(item: CommentaryItem) -> Text:
 
     # ── Dismissal detail in red (third line, wickets only) ──
     if item.is_wicket and item.dismissal_text:
-        line.append(f"\n        {item.dismissal_text}", style=f"bold {_DANGER}")
+        detail = item.dismissal_text.long or item.dismissal_text.short
+        if detail:
+            line.append(f"\n        {detail}", style=f"bold {_DANGER}")
 
     return line
 

@@ -149,6 +149,63 @@ def test_recent_ball_display_wicket() -> None:
     assert ball.display == "W"
 
 
+# ---------- dismissalText shapes ----------
+
+def test_dismissal_text_dict_shape() -> None:
+    """ESPN sends a wicket's dismissalText as a structured object, not a string.
+
+    Regression: a single dict-shaped dismissalText used to raise a
+    ValidationError and take down the entire commentary feed.
+    """
+    item = CommentaryItem.model_validate({
+        "id": 7, "oversActual": 10.4, "totalRuns": 0, "batsmanRuns": 0,
+        "isFour": False, "isSix": False, "isWicket": True,
+        "dismissalText": {
+            "short": "caught", "long": "c Powell b Hosein",
+            "commentary": "Kamindu Mendis c Powell b Hosein 20",
+            "fielderText": "c Powell", "bowlerText": "b Hosein",
+        },
+        "commentTextItems": [],
+    })
+    assert item.dismissal_text is not None
+    assert item.dismissal_text.long == "c Powell b Hosein"
+    assert item.dismissal_text.short == "caught"
+
+
+def test_dismissal_text_string_shape() -> None:
+    """A bare-string dismissalText is coerced into the structured form."""
+    item = CommentaryItem.model_validate({
+        "id": 8, "oversActual": 10.5, "isWicket": True,
+        "dismissalText": "c Powell b Hosein", "commentTextItems": [],
+    })
+    assert item.dismissal_text is not None
+    assert item.dismissal_text.long == "c Powell b Hosein"
+
+
+def test_commentary_payload_with_wicket_parses() -> None:
+    """A feed containing a wicket delivery parses without error."""
+    payload = {
+        "content": {
+            "currentInningNumber": 1,
+            "comments": [
+                {
+                    "id": 1, "oversActual": 10.5, "isWicket": False,
+                    "commentTextItems": [],
+                },
+                {
+                    "id": 2, "oversActual": 10.4, "isWicket": True,
+                    "dismissalText": {"long": "c Powell b Hosein"},
+                    "commentTextItems": [],
+                },
+            ],
+        }
+    }
+    c = Commentary.from_commentary_payload(payload)
+    assert len(c.items) == 2
+    assert c.items[1].dismissal_text is not None
+    assert c.items[1].dismissal_text.long == "c Powell b Hosein"
+
+
 # ---------- from_commentary_payload error path ----------
 
 def test_missing_content_returns_empty() -> None:
