@@ -242,6 +242,29 @@ async def test_live_panel_update_state(
         await pilot.pause()
 
 
+@pytest.mark.asyncio
+async def test_live_screen_recovers_after_initial_live_failure(
+    live_match: Match, live_state: LiveState, commentary_obj: Commentary
+) -> None:
+    from cricscore.tui.widgets import CommentaryPanel, LivePanel, MatchHeader
+
+    app = CricScoreApp(match=live_match, commentary=commentary_obj)
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        screen = app.screen
+        assert screen._refresh_timer is not None
+        assert screen.query_one(MatchHeader)
+        assert screen.query_one(CommentaryPanel)._commentary == commentary_obj
+        screen._apply_refresh(live_match, live_state, commentary_obj)
+        await pilot.pause()
+        assert screen.query_one(LivePanel)
+        assert not list(screen.query(MatchHeader))
+        screen._apply_refresh(live_match, None, None)
+        await pilot.pause()
+        assert screen.live == live_state
+        assert screen.commentary == commentary_obj
+
+
 # ---------------------------------------------------------------------------
 # Commentary panel tests
 # ---------------------------------------------------------------------------

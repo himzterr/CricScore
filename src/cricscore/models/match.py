@@ -310,8 +310,8 @@ class LiveInfo(_ESPNModel):
     last_few_overs_runrate: float | None = Field(
         default=None, alias="lastFewOversRunrate"
     )
-    last_few_overs_runs: str | None = Field(default=None, alias="lastFewOversRuns")
-    last_few_overs_wickets: str | None = Field(
+    last_few_overs_runs: int | str | None = Field(default=None, alias="lastFewOversRuns")
+    last_few_overs_wickets: int | str | None = Field(
         default=None, alias="lastFewOversWickets"
     )
 
@@ -509,6 +509,12 @@ class CommentaryItem(_ESPNModel):
     comment_text_items: list[dict[str, Any]] = Field(
         default_factory=list, alias="commentTextItems"
     )
+
+    @field_validator("comment_text_items", mode="before")
+    @classmethod
+    def _empty_comment_text(cls, value: Any) -> Any:
+        # A delivery may arrive before its written commentary is available.
+        return [] if value is None else value
 
     @field_validator("dismissal_text", mode="before")
     @classmethod

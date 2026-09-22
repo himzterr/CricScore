@@ -35,6 +35,19 @@ def test_commentary_has_items(commentary: Commentary) -> None:
     assert len(commentary.items) > 0
 
 
+def test_delivery_without_narrative_does_not_discard_feed() -> None:
+    commentary = Commentary.from_commentary_payload({"content": {"comments": [
+        {"id": 2, "oversActual": 7.2, "totalRuns": 1, "commentTextItems": None},
+        {"id": 1, "oversActual": 7.1, "commentTextItems": [
+            {"html": "Driven through cover"},
+        ]},
+    ]}})
+    assert len(commentary.items) == 2
+    assert commentary.items[0].text == ""
+    assert commentary.items[0].total_runs == 1
+    assert commentary.items[1].text == "Driven through cover"
+
+
 def test_commentary_current_inning(commentary: Commentary) -> None:
     assert commentary.current_inning_number == 1
 

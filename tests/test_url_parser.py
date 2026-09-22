@@ -38,6 +38,18 @@ def test_parses_cricinfo_com_live_url() -> None:
     assert parse_match_url(CRICINFO_LIVE_URL) == MatchRef(series_id=1496567, match_id=1496588)
 
 
+@pytest.mark.parametrize("host", ["www.espn.com", "espn.com", "WWW.ESPN.COM"])
+@pytest.mark.parametrize("suffix", ["", "/", "/england-vs-sri-lanka-1st-odi-23802?x=1#score"])
+def test_parses_espn_game_url(host: str, suffix: str) -> None:
+    url = f"https://{host}/cricket/series/23802/game/1496588{suffix}"
+    assert parse_match_url(url) == MatchRef(series_id=23802, match_id=1496588)
+
+
+def test_parses_wrapped_espn_url() -> None:
+    url = "https://www.espn.com/cricket/\n  series/23802/game/1496588/england-vs-sri-lanka"
+    assert parse_match_url(url) == MatchRef(series_id=23802, match_id=1496588)
+
+
 def test_tolerates_query_and_fragment() -> None:
     url = IPL_URL + "?foo=bar#section"
     assert parse_match_url(url) == MatchRef(series_id=1510719, match_id=1529313)
@@ -68,6 +80,11 @@ def test_accepts_any_match_sub_page(sub_page: str) -> None:
         "not-a-url",
         "ftp://www.espncricinfo.com/series/x-1/y-2/full-scorecard",
         "https://example.com/series/x-1/y-2/full-scorecard",
+        "https://espn.com.attacker.net/cricket/series/23802/game/1496588",
+        "https://www.espn.com/cricket/series/23802",
+        "https://www.espn.com/cricket/series/no-id/game/1496588",
+        "https://www.espn.com/cricket/series/23802/game/no-id",
+        "https://www.espn.com/football/series/23802/game/1496588",
         # Lookalike hosts that merely end in cricinfo.com
         "https://notcricinfo.com/series/x-1/y-2/full-scorecard",
         "https://evil.cricinfo.com.attacker.net/series/x-1/y-2/full-scorecard",

@@ -1,7 +1,8 @@
 # CricScore
 
-A polished terminal UI for ESPNCricinfo match scorecards. Paste a full-scorecard
-URL, watch the match render in your terminal with animated text effects.
+A terminal UI for cricket scorecards, live scores, and ball-by-ball commentary.
+Paste an ESPNCricinfo, Cricinfo, or ESPN cricket match URL. Live matches refresh
+every 20 seconds; press `r` to refresh immediately.
 
 > Status: **Phase 4 — polished TUI.** Typewriter title, gradient scores,
 > per-over runs sparkline, staggered batting-table reveal, cycling
@@ -35,6 +36,9 @@ cricscore "https://www.cricinfo.com/series/sri-lanka-in-england-2026-1496567/eng
 # Or open the in-app URL paste screen
 cricscore
 
+# ESPN game links work too (including their legacy series IDs)
+cricscore "https://www.espn.com/cricket/series/23802/game/1496588/england-vs-sri-lanka-1st-odi-23802"
+
 # Non-interactive: human-readable summary
 cricscore --summary "<url>"
 
@@ -49,6 +53,7 @@ cricscore --json "<url>" | jq .
 | `n`   | Next innings tab        |
 | `p`   | Previous innings tab    |
 | `tab` | Cycle focus             |
+| `r`   | Refresh live match      |
 | `q`   | Quit                    |
 
 ## Development
