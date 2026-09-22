@@ -29,6 +29,9 @@ pip install -e ".[dev]"
 # Launch the TUI (default)
 cricscore "https://www.espncricinfo.com/series/ipl-2026-1510719/kolkata-knight-riders-vs-delhi-capitals-70th-match-1529313/full-scorecard"
 
+# cricinfo.com links work too
+cricscore "https://www.cricinfo.com/series/sri-lanka-in-england-2026-1496567/england-vs-sri-lanka-1st-odi-1496588/live-cricket-score"
+
 # Or open the in-app URL paste screen
 cricscore
 

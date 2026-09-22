@@ -17,7 +17,8 @@ class MatchRef:
     match_id: int
 
 
-_HOST_PATTERN = re.compile(r"^(www\.)?espncricinfo\.com$", re.IGNORECASE)
+# espncricinfo.com and its cricinfo.com alias, each with an optional "www.".
+_HOST_PATTERN = re.compile(r"^(www\.)?(espn)?cricinfo\.com$", re.IGNORECASE)
 _SERIES_SEGMENT = re.compile(r"^(?P<slug>.+)-(?P<id>\d+)$")
 _MATCH_SEGMENT = re.compile(r"^(?P<slug>.+)-(?P<id>\d+)$")
 
@@ -31,9 +32,12 @@ def parse_match_url(url: str) -> MatchRef:
             <match-slug>-<match_id>/<sub-page>
 
     where ``<sub-page>`` is any suffix (``full-scorecard``,
-    ``live-cricket-score``, ``ball-by-ball-commentary``, etc.).  Query strings
-    and fragments are ignored.  Raises :class:`InvalidUrlError` for anything
-    that doesn't contain both a valid series id and a valid match id.
+    ``live-cricket-score``, ``ball-by-ball-commentary``, etc.).  The
+    ``cricinfo.com`` alias is accepted for the host, with or without a ``www.``
+    prefix; only the ids matter downstream, since fetches are always issued
+    against ``www.espncricinfo.com``.  Query strings and fragments are ignored.
+    Raises :class:`InvalidUrlError` for anything that doesn't contain both a
+    valid series id and a valid match id.
     """
     if not isinstance(url, str) or not url.strip():
         raise InvalidUrlError("URL must be a non-empty string")
@@ -42,7 +46,9 @@ def parse_match_url(url: str) -> MatchRef:
     if parsed.scheme not in {"http", "https"}:
         raise InvalidUrlError(f"Unsupported URL scheme: {parsed.scheme!r}")
     if not parsed.netloc or not _HOST_PATTERN.match(parsed.netloc):
-        raise InvalidUrlError(f"Not an espncricinfo.com URL: {parsed.netloc!r}")
+        raise InvalidUrlError(
+            f"Not an espncricinfo.com or cricinfo.com URL: {parsed.netloc!r}"
+        )
 
     segments = [seg for seg in parsed.path.split("/") if seg]
     # Expected shape: ['series', '<slug>-<id>', '<slug>-<id>', '<sub-page>', ...]
