@@ -17,7 +17,7 @@ class URLInputScreen(Screen):
         with Container(id="url-card"):
             yield Label("CricScore", id="url-title")
             yield Input(
-                placeholder="Paste an espncricinfo/cricinfo match URL...",
+                placeholder="Paste a Cricinfo or ESPN cricket match URL...",
                 id="url-input",
             )
             yield Label("Invalid URL", id="url-error")

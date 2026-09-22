@@ -92,6 +92,24 @@ def test_live_and_commentary_are_in_sync(commentary_payload: dict) -> None:
     assert live.recent_balls[0].overs_actual == commentary.items[0].overs_actual
 
 
+@pytest.mark.parametrize("runs,wickets", [(19, 0), (18, 1), ("19", "0"), (None, None)])
+def test_live_feed_accepts_numeric_recent_over_totals(
+    commentary_payload: dict, runs: int | str | None, wickets: int | str | None
+) -> None:
+    from copy import deepcopy
+
+    payload = deepcopy(commentary_payload)
+    info = payload["content"]["supportInfo"].setdefault("liveInfo", {})
+    info.update(lastFewOversRuns=runs, lastFewOversWickets=wickets)
+    client = FakeClient(scorecard=_live_scorecard(), commentary=payload)
+    _, live, commentary = fetch_match_state(client, REF)  # type: ignore[arg-type]
+    assert live is not None and live.info is not None
+    assert live.info.last_few_overs_runs == runs
+    assert live.info.last_few_overs_wickets == wickets
+    assert commentary is not None and commentary.items
+    assert client.calls == ["scorecard", "commentary"]
+
+
 # ---------- non-live match: no live/commentary fetches ----------
 
 def test_finished_match_skips_live_and_commentary() -> None:

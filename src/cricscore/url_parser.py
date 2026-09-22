@@ -19,6 +19,10 @@ class MatchRef:
 
 # espncricinfo.com and its cricinfo.com alias, each with an optional "www.".
 _HOST_PATTERN = re.compile(r"^(www\.)?(espn)?cricinfo\.com$", re.IGNORECASE)
+_ESPN_HOST_PATTERN = re.compile(r"^(www\.)?espn\.com$", re.IGNORECASE)
+_ESPN_PATH_PATTERN = re.compile(
+    r"^/cricket/series/(?P<series>[0-9]+)/game/(?P<match>[0-9]+)(?:/[^/]*)?/?$"
+)
 _SERIES_SEGMENT = re.compile(r"^(?P<slug>.+)-(?P<id>\d+)$")
 _MATCH_SEGMENT = re.compile(r"^(?P<slug>.+)-(?P<id>\d+)$")
 
@@ -34,7 +38,9 @@ def parse_match_url(url: str) -> MatchRef:
     where ``<sub-page>`` is any suffix (``full-scorecard``,
     ``live-cricket-score``, ``ball-by-ball-commentary``, etc.).  The
     ``cricinfo.com`` alias is accepted for the host, with or without a ``www.``
-    prefix; only the ids matter downstream, since fetches are always issued
+    prefix. ESPN's ``/cricket/series/<id>/game/<id>/<slug>`` format is also
+    accepted: Cricinfo resolves its legacy series id to the canonical series.
+    Only the ids matter downstream, since fetches are always issued
     against ``www.espncricinfo.com``.  Query strings and fragments are ignored.
     Raises :class:`InvalidUrlError` for anything that doesn't contain both a
     valid series id and a valid match id.
@@ -42,12 +48,20 @@ def parse_match_url(url: str) -> MatchRef:
     if not isinstance(url, str) or not url.strip():
         raise InvalidUrlError("URL must be a non-empty string")
 
-    parsed = urlparse(url.strip())
+    # Pasted links may be wrapped across lines with indentation.
+    parsed = urlparse("".join(url.split()))
     if parsed.scheme not in {"http", "https"}:
         raise InvalidUrlError(f"Unsupported URL scheme: {parsed.scheme!r}")
-    if not parsed.netloc or not _HOST_PATTERN.match(parsed.netloc):
+    if _ESPN_HOST_PATTERN.fullmatch(parsed.netloc):
+        match = _ESPN_PATH_PATTERN.fullmatch(parsed.path)
+        if not match:
+            raise InvalidUrlError(
+                "Expected an ESPN match URL: /cricket/series/<id>/game/<id>/<slug>"
+            )
+        return MatchRef(series_id=int(match["series"]), match_id=int(match["match"]))
+    if not parsed.netloc or not _HOST_PATTERN.fullmatch(parsed.netloc):
         raise InvalidUrlError(
-            f"Not an espncricinfo.com or cricinfo.com URL: {parsed.netloc!r}"
+            f"Not an espncricinfo.com, cricinfo.com or espn.com URL: {parsed.netloc!r}"
         )
 
     segments = [seg for seg in parsed.path.split("/") if seg]

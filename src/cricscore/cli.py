@@ -34,7 +34,7 @@ def main(
     url: str = typer.Argument(
         None,
         metavar="[URL]",
-        help="ESPNCricinfo full-scorecard URL. Omit to open the in-app input screen.",
+        help="Cricinfo or ESPN cricket match URL. Omit to open the in-app input screen.",
     ),
     as_json: bool = typer.Option(
         False,

@@ -66,7 +66,7 @@ class ScorecardScreen(Screen):
                     yield InningsPanel(innings)
 
         # Commentary section — only shown for live matches.
-        if self.live and self.match.is_live:
+        if self.match.is_live:
             yield CommentaryPanel(
                 self.commentary or Commentary(items=[]),
                 id="commentary-panel",
@@ -77,7 +77,7 @@ class ScorecardScreen(Screen):
     # ---------- lifecycle ----------
 
     def on_mount(self) -> None:
-        if self.live and self.match.is_live:
+        if self.match.is_live:
             self._refresh_timer = self.set_interval(_REFRESH_INTERVAL, self._refresh)  # type: ignore[assignment]
 
     def on_unmount(self) -> None:
@@ -92,7 +92,7 @@ class ScorecardScreen(Screen):
 
     def action_refresh_now(self) -> None:
         """Immediately kick off a refresh (bound to 'r' key)."""
-        if self.live and self.match.is_live:
+        if self.match.is_live:
             self._refresh()
 
     # ---------- auto-refresh worker ----------
@@ -131,13 +131,25 @@ class ScorecardScreen(Screen):
         new_commentary: Commentary | None = None,
     ) -> None:
         """Update the screen with fresh data from a completed refresh worker."""
+        rebuild = (
+            self.match.is_live != new_match.is_live
+            or (self.live is None and new_live is not None)
+            or [inn.inning_number for inn in self.match.innings]
+            != [inn.inning_number for inn in new_match.innings]
+        )
         self.match = new_match
-        self.live = new_live
-        self.commentary = new_commentary
+        if new_live is not None:
+            self.live = new_live
+        if new_commentary is not None:
+            self.commentary = new_commentary
 
         # Stop polling if the match is no longer live.
         if not new_match.is_live:
             self._stop_refresh_timer()
+
+        if rebuild:
+            self.call_after_refresh(self.recompose)
+            return
 
         # Update the live panel.
         if new_live is not None:
@@ -180,9 +192,7 @@ class ScorecardScreen(Screen):
                 # Textual's TabbedContent doesn't expose a direct label-setter
                 # per tab; update via the underlying Tab widget.
                 try:
-                    from textual.widgets import Tab
-
-                    tab_widget = tabs.query_one(f"Tab#{pane.id}", Tab)
+                    tab_widget = tabs.get_tab(pane.id)
                     tab_widget.label = new_label  # type: ignore[assignment]
                 except Exception:
                     pass
